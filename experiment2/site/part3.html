@@ -1,0 +1,237 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part 3 — Fixing survivorship</title>
+<link rel="stylesheet" href="study_styles.css">
+</head><body>
+
+<div class="topbar"><div class="wrap">
+  <span class="dot"></span><span class="tag">WORTH FOLLOWING?</span>
+  <nav>
+    <a href="index.html">Overview</a><a href="part1_explainer.html">P1</a>
+    <a href="part2.html">P2</a><a href="part3.html" class="here">P3</a>
+    <a href="part4.html">P4</a><a href="part5.html">P5</a>
+    <a href="pipeline.html">Map</a>
+    <button class="tbtn" id="themeBtn">theme</button>
+  </nav>
+</div></div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="partno">Part 3</div>
+    <h1>Adding the losers back</h1>
+    <p class="lead">Everything so far used the top-500 wallets by PnL — <b>winners only</b>. You can't tell skill from
+      luck without losers, and you can't build a baseline without the full distribution. Part 3 builds a
+      <b>profitability-neutral</b> cohort of thousands of wallets, sampled straight from the fill log.</p>
+  </header>
+
+  <section>
+    <div class="snum">01 · THE BLOCKING PROBLEM</div>
+    <h2>Survivorship bias</h2>
+    <div class="measure">
+      <p>The lum.id leaderboard is sorted by PnL and capped at 500 — so our cohort was <b>the winners</b>. Every
+        claim about "what distinguishes good wallets" is meaningless without the wallets that <em>failed</em>: the
+        top decile isn't impressive if the whole field did just as well.</p>
+      <p><b>Why it's hard:</b> lum.id can't hand you losers (it only ranks winners). So we need a way to enumerate
+        wallets that is <b>neutral with respect to profitability</b> — one that samples on <em>activity</em>, not on
+        <em>winning</em>.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">02 · THE METHOD</div>
+    <h2>Time-slice fill sampling</h2>
+    <div class="measure">
+      <p>The order-book subgraph holds every fill ever. If we sample fills scattered across the whole history and
+        collect the distinct wallet addresses, we get a sample that conditions on <b>trading</b>, not on
+        <b>winning</b> — so it naturally includes losers.</p>
+      <p class="callout"><b>Why it's PnL-neutral:</b> a fill happens whether the wallet made or lost money. Sampling
+        by fill-occurrence has no idea who won. It <em>is</em> activity-weighted (frequent traders appear more often)
+        — a bias we measure and report, but it's orthogonal to profitability, which is the property we needed to
+        de-bias.</p>
+    </div>
+    <div class="tiles" id="enum-tiles"></div>
+  </section>
+
+  <section>
+    <div class="snum">03 · RECONSTRUCTION</div>
+    <h2>From candidates to a cohort</h2>
+    <p class="measure">Reconstructing every candidate is expensive, so we calibrated first: sampling across
+      <b>appearance tiers</b> (how often a wallet showed up) told us where the followable wallets are and how much
+      each tier costs to fetch.</p>
+    <div class="panel scroll"><table class="data">
+      <thead><tr><th>Activity tier</th><th class="num">≥30-resolved hit-rate</th><th class="num">avg fills</th><th>character</th></tr></thead>
+      <tbody id="calib-body"></tbody>
+    </table></div>
+    <div class="measure" style="margin-top:14px">
+      <p>The lesson: the <b>hyperactive tier</b> (≥5 appearances) is mostly <b class="trade">market-makers</b> —
+        huge to fetch (median 6,635 fills, often hitting the cap) and exactly the <em>non-followable</em> population.
+        The <b class="hold">low tier</b> still qualifies ~47% of the time and holds the moderate directional holders
+        we care about. So we capped fills at <b>8,000</b> per wallet (moderate wallets fit under it; hyperactive
+        ones truncate, flagged) and fetched in parallel.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">04 · THE COHORT</div>
+    <h2>Winners and losers, side by side</h2>
+    <p class="measure"><b id="s-fetched"></b> wallets fetched → <b id="s-qual"></b> clear the ≥30-resolved floor.
+      Tagged by whether they were in the original top-500 (<b>winner</b>) or newly sampled:</p>
+    <div class="panel scroll"><table class="data">
+      <thead><tr><th>Group</th><th class="num">wallets</th><th class="num">% profitable</th><th class="num">median PnL</th><th class="num">median trading_share</th></tr></thead>
+      <tbody id="groups-body"></tbody>
+    </table></div>
+    <p class="measure callout" style="margin-top:16px"><b id="loser-line"></b> The sampled group's median wallet
+      <em>loses</em> money, while winners' median makes six figures — proof the activity sampling captured a
+      genuinely different, worse-off population. That's the control group the persistence tests need.</p>
+  </section>
+
+  <section>
+    <div class="snum">05 · THE SHIFT, VISUALLY</div>
+    <h2>Two different worlds</h2>
+    <p class="measure">Distribution of realized PnL — winners vs the sampled cohort. The sampled cohort is centered
+      near zero and spills well into the red; the winners live entirely to the right.</p>
+    <div class="panel"><div class="chart" id="pnlhist"></div>
+      <div class="kv" style="margin-top:8px"><span class="chip hold">winners</span> &nbsp; <span class="chip trade">sampled</span> &nbsp; (bars share a signed-log PnL axis)</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">06 · DID THE FINDINGS SURVIVE?</div>
+    <h2>Still holder-dominated, still one population</h2>
+    <p class="measure">Re-running Parts 1–2 on the full 3,330-wallet cohort, the headline holds even with losers and
+      traders now in the sample:</p>
+    <div class="tiles" id="survive-tiles"></div>
+    <p class="measure kv" style="margin-top:12px">Including the losers did not create a second mode — the holder/trader
+      split is still a single continuum (dip p ≈ 1.0), and still overwhelmingly holders.</p>
+  </section>
+
+  <section>
+    <div class="snum">07 · WHAT BECAME POSSIBLE</div>
+    <h2>Claims unlocked</h2>
+    <div class="panel">
+      <ol style="margin:0;padding-left:20px">
+        <li><b>Baselines for persistence.</b> Random / median / bottom-decile wallets now exist to test the top
+          decile against — without them, "the top decile persisted" is uninterpretable.</li>
+        <li><b>Winner-vs-loser discrimination.</b> Losers are in-sample, so "what separates them" is answerable.</li>
+        <li><b>Rank-within-the-field.</b> Forward rank tests can judge the top decile against the real distribution,
+          not just against other survivors.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">08 · ASSUMPTIONS &amp; POSSIBLE ERRORS</div>
+    <h2>What could be wrong here</h2>
+    <div class="risk" id="risks"></div>
+  </section>
+
+  <section>
+    <div class="snum">09 · FILES</div>
+    <h2>Created, changed &amp; produced</h2>
+    <div class="files">
+      <h4>Created</h4>
+      <div class="scroll"><table class="data">
+        <tr><td><code>20_enumerate_cohort.py</code></td><td>Time-slice samples the subgraph fill log (200 slices) →
+          PnL-neutral candidate pool with per-wallet appearance counts.</td><td class="mono">→ candidates.json</td></tr>
+        <tr><td><code>21_reconstruct_cohort.py</code></td><td>Parallel-fetches candidates (8k fill cap, 8 workers),
+          counts resolved positions, keeps ≥30. Calibrate + full modes.</td><td class="mono">→ cohort_qualifiers.json</td></tr>
+        <tr><td><code>23_part3_report.py</code></td><td>Tags wallets winner/sampled (via <code>lumid_full.json</code>),
+          reports % profitable and which claims become possible.</td><td class="mono">→ cohort_labeled.csv</td></tr>
+      </table></div>
+      <h4>Changed (bugs found &amp; hardened during the big fetch)</h4>
+      <div class="scroll"><table class="data">
+        <tr><td><code>lib_subgraph.py</code></td><td>Caught <code>socket.timeout</code>/<code>OSError</code> in the
+          retry loop — in Python 3.9 <code>socket.timeout</code> isn't a <code>TimeoutError</code>, so read-timeouts
+          were escaping and crashing the fetch.</td></tr>
+        <tr><td><code>lib_recon.py</code></td><td>Memoized the big token caches; made <code>_save</code> conditional
+          (it was rewriting 92 MB per wallet) and <b>atomic</b> (temp+rename) — after a mid-write kill corrupted
+          <code>cond_payout.json</code> (recovered by salvaging the valid prefix).</td></tr>
+      </table></div>
+      <h4>Produced</h4>
+      <p class="kv"><code>out/candidates.json</code> (34,360 candidates) · <code>out/cohort_labeled.csv</code>
+        (3,330 wallets, tagged + profitable flag) · the full <code>data/fills/</code> cache grew to
+        <b id="f-cache"></b> wallets. Parts 1–2 re-ran over the whole thing.</p>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="part2.html">← Part 2 · Aggregation</a>
+    <a href="part4.html">Part 4 · Persistence →</a>
+  </div>
+  <div class="footer"><p class="kv">All figures are real computed values from <code>out/cohort_labeled.csv</code>,
+    <code>out/candidates.json</code>, and the session logs. Calibration hit-rates are from the 90-wallet parallel
+    calibration run.</p></div>
+</div>
+
+<script id="d" type="application/json">{"groups":{"all":{"n":3330,"profitable":0.457,"median_pnl":-13.66815,"median_ts":0.003},"winner":{"n":214,"profitable":0.71,"median_pnl":143367.39320000014,"median_ts":0.001},"sampled":{"n":3116,"profitable":0.44,"median_pnl":-20.6154,"median_ts":0.004}},"losers":{"n":1808,"pct":0.543},"enum":{"slices":200,"fills":200000,"candidates":34360,"ge2":6114,"ge3":3280,"ge5":1580},"calib":[{"tier":"hi (\u22655 appearances)","qualify":0.86,"avg_fills":6635,"note":"hyperactive market-makers, mostly truncated"},{"tier":"mid (3\u20134)","qualify":0.5,"avg_fills":3200,"note":"moderate"},{"tier":"lo (1\u20132)","qualify":0.47,"avg_fills":1547,"note":"the followable moderate holders"}],"bimodal":{"dip":0.0029,"p":1.0,"holders_pct":0.909,"traders_pct":0.0,"median":0.003},"pnl_edges":["<-100k","-100k","-10k","-1k","-100","0","100","1k","10k","100k","1M",">1M"],"pnl_hist":{"winner":[43,13,5,1,0,0,1,6,27,105,13],"sampled":[31,193,487,571,464,318,398,412,212,30,0]},"scale":{"fetched":6347,"qualified":3330}}</script>
+<script>
+const D=JSON.parse(document.getElementById('d').textContent);
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{const c=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');root.setAttribute('data-theme',c==='dark'?'light':'dark');};
+const money=n=>{const a=Math.abs(n);const s=n<0?'-$':'$';return a>=1e6?s+(a/1e6).toFixed(1)+'M':a>=1e3?s+(a/1e3).toFixed(0)+'k':s+Math.round(a);};
+const pct=n=>(n*100).toFixed(0)+'%';
+
+// enum tiles
+const en=D.enum;
+document.getElementById('enum-tiles').innerHTML=[
+ [en.fills.toLocaleString(),'fills sampled ('+en.slices+' slices)'],
+ [en.candidates.toLocaleString(),'distinct candidate wallets'],
+ [en.ge3.toLocaleString(),'appeared in ≥3 slices'],
+ [en.ge5.toLocaleString(),'appeared in ≥5 (hyperactive)'],
+].map(t=>`<div class="tile"><div class="v">${t[0]}</div><div class="k">${t[1]}</div></div>`).join('');
+
+// calibration
+document.getElementById('calib-body').innerHTML=D.calib.map(c=>
+ `<tr><td>${c.tier}</td><td class="num"><b>${pct(c.qualify)}</b></td><td class="num">${c.avg_fills.toLocaleString()}</td><td>${c.note}</td></tr>`).join('');
+
+// cohort scale + groups
+document.getElementById('s-fetched').textContent=D.scale.fetched.toLocaleString();
+document.getElementById('s-qual').textContent=D.scale.qualified.toLocaleString();
+document.getElementById('f-cache').textContent=D.scale.fetched.toLocaleString();
+const g=D.groups;
+function grow(name,o,cls){return `<tr><td><b class="${cls||''}">${name}</b></td><td class="num">${o.n.toLocaleString()}</td><td class="num">${pct(o.profitable)}</td><td class="num">${money(o.median_pnl)}</td><td class="num">${o.median_ts.toFixed(3)}</td></tr>`;}
+document.getElementById('groups-body').innerHTML=grow('All qualifiers',g.all)+grow('Winners (top-500)',g.winner,'hold')+grow('Sampled (fill log)',g.sampled,'trade');
+document.getElementById('loser-line').innerHTML=`<b>${D.losers.n.toLocaleString()} of ${g.all.n.toLocaleString()} (${pct(D.losers.pct)})</b> are unprofitable — versus the old winners-only view where essentially all were profitable.`;
+
+// pnl histogram (grouped bars, signed-log bins)
+(function(){
+  const lab=D.pnl_edges, wsr=D.pnl_hist.winner, smp=D.pnl_hist.sampled;
+  const W=880,H=250,pL=34,pR=10,pB=44,pT=10,n=lab.length;
+  const mx=Math.max(...wsr,...smp), bw=(W-pL-pR)/n;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  // zero divider
+  const zi=lab.indexOf('0'); const zx=pL+zi*bw;
+  s+=`<rect x="${pL}" y="${pT}" width="${zx-pL}" height="${H-pB-pT}" fill="var(--bad-soft)"/>`;
+  for(let i=0;i<n;i++){
+    const x=pL+i*bw;
+    const hw=mx?smp[i]/mx*(H-pB-pT):0, hh=mx?wsr[i]/mx*(H-pB-pT):0;
+    s+=`<rect x="${x+bw*0.12}" y="${H-pB-hw}" width="${bw*0.36}" height="${hw}" fill="var(--trading)"/>`;
+    s+=`<rect x="${x+bw*0.52}" y="${H-pB-hh}" width="${bw*0.36}" height="${hh}" fill="var(--holding)"/>`;
+    s+=`<text class="axlabel" x="${x+bw/2}" y="${H-pB+14}" text-anchor="middle" transform="rotate(0 ${x+bw/2} ${H-pB+14})">${lab[i]}</text>`;
+  }
+  s+=`<text class="axlabel" x="${(pL+zx)/2}" y="${H-8}" text-anchor="middle" fill="var(--bad)">losses</text>`;
+  document.getElementById('pnlhist').innerHTML=s+'</svg>';
+})();
+
+// survive tiles
+const b=D.bimodal;
+document.getElementById('survive-tiles').innerHTML=[
+ [b.p.toFixed(2),'dip test p-value (unimodal)','gate'],
+ [pct(b.holders_pct),'pure holders','hold'],
+ [(b.traders_pct*100).toFixed(1)+'%','pure traders','trade'],
+ [b.median.toFixed(3),'median trading_share',''],
+].map(t=>`<div class="tile ${t[2]}"><div class="v">${t[0]}</div><div class="k">${t[1]}</div></div>`).join('');
+
+// risks
+const R=[
+ ['med','Activity-weighted sampling',`A wallet's chance of being caught is ~proportional to its fill count, so the cohort over-represents high-frequency wallets. It is PnL-neutral (the property we needed), but it is NOT a uniform random sample of all wallets — low-activity holders who trade rarely are under-represented. Conclusions are about "wallets discoverable via activity," not the entire universe.`],
+ ['med','8,000-fill cap truncates the hyperactive tail',`Moderate holders (the focus) fit under 8k and are captured complete; but genuinely high-volume wallets truncate, so their reconstructed PnL/trading_share is on partial history. These are flagged; Part 4 leans on the untruncated majority. Some legitimately active holders may also exceed 8k and be truncated.`],
+ ['med','Winners still only ~284 of 500 reconstructable',`Post-April-2026 wallets and mega-bots (millions of fills) couldn't be reconstructed at all, so the "winner" comparison group is itself a reconstructable subset of the top-500, not the full 500.`],
+ ['low','CTF / market-maker exclusion carries over',`The same ~32%-volume / ~20%-PnL CTF blind spot from Parts 1–2 applies. "% profitable" is on the clean decomposable set.`],
+ ['low','Bugs found mid-fetch (now fixed)',`A Python-3.9 socket.timeout escape, a 92 MB-per-wallet disk write, and a cache corruption from killing a run mid-write were all discovered and hardened during this part. Cache writes are now atomic. The corrupted condition cache was recovered by salvaging its valid prefix (129,792 of ~262k entries) and self-healing the rest.`],
+ ['low','Only ~600 hedged pairs sampled for the flip check',`The finding that ~41% of "hedged" flags are sequential flips (not simultaneous hedges) is from a 600-pair sample of 131k; it has sampling error (~±4%). We chose not to refine the flag (small dollar impact).`],
+];
+document.getElementById('risks').innerHTML=R.map(r=>
+ `<div class="item"><div class="rh"><span class="sev ${r[0]}">${r[0]==='med'?'moderate':'minor'}</span>${r[1]}</div><p>${r[2]}</p></div>`).join('');
+</script>
+</body></html>

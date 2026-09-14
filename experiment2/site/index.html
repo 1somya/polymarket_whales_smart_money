@@ -1,0 +1,167 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Is Any Wallet Worth Following? — Study overview</title>
+<link rel="stylesheet" href="study_styles.css">
+</head><body>
+
+<div class="topbar"><div class="wrap">
+  <span class="dot"></span><span class="tag">WORTH FOLLOWING? · POLYMARKET WHALES</span>
+  <nav>
+    <a href="index.html" class="here">Overview</a><a href="part1_explainer.html">P1</a>
+    <a href="part2.html">P2</a><a href="part3.html">P3</a>
+    <a href="part4.html">P4</a><a href="part5.html">P5</a>
+    <a href="pipeline.html">Map</a>
+    <button class="tbtn" id="themeBtn">theme</button>
+  </nav>
+</div></div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="partno">A feasibility study</div>
+    <h1>Is any Polymarket wallet worth following?</h1>
+    <p class="lead">Can you make money copying a wallet's bets? Only if its edge is in <b class="hold">being right
+      about outcomes</b> (copyable), not <b class="trade">trading the price</b> (not copyable) — and only if that
+      edge <b>persists out-of-sample</b>. This study is the feasibility gate: five parts, from raw on-chain fills to
+      an honest verdict.</p>
+    <p class="measure callout"><b>Verdict:</b> Yes — but the edge is <b>small, lumpy, decays gradually over at least
+      half a year without fully disappearing, and cuts both ways</b> (avoiding bad wallets and picking good ones are
+      comparably useful). Genuine steady compounders are ~1% of holders.</p>
+  </header>
+
+  <section>
+    <div class="snum">THE FIVE PARTS</div>
+    <h2>Read in order</h2>
+    <div class="files"><div class="scroll"><table class="data">
+      <tr><td><a href="part1_explainer.html"><b>Part 1 — Decomposition</b></a></td>
+        <td>Split every position's profit into trading vs holding, via FIFO, on real fills. Interactive.</td></tr>
+      <tr><td><a href="part2.html"><b>Part 2 — Aggregation</b></a></td>
+        <td>Roll up to wallets; the <span class="mono">trading_share</span> key variable; is the split bimodal? (No — one continuum.)</td></tr>
+      <tr><td><a href="part3.html"><b>Part 3 — Survivorship</b></a></td>
+        <td>Add the losers back: a PnL-neutral cohort sampled from 6,347 wallets, 2,055 qualify (59% losers) via activity sampling.</td></tr>
+      <tr><td><a href="part4.html"><b>Part 4 — Persistence</b></a></td>
+        <td>The central test: does the edge survive out-of-sample? Consistency, equity curves, decay.</td></tr>
+      <tr><td><a href="part5.html"><b>Part 5 — Verdict</b></a></td>
+        <td>The five questions answered honestly, with strategy implications and all caveats.</td></tr>
+    </table></div></div>
+  </section>
+
+  <section>
+    <div class="snum">AT A GLANCE</div>
+    <h2>The numbers that matter</h2>
+    <div class="tiles">
+      <div class="tile hold"><div class="v">963k</div><div class="k">positions decomposed</div></div>
+      <div class="tile gate"><div class="v">6.4e-7</div><div class="k">max reconciliation error · gate passed</div></div>
+      <div class="tile"><div class="v">2,055</div><div class="k">wallets (≥30 resolved), 59% losers</div></div>
+      <div class="tile hold"><div class="v">98.2%</div><div class="k">of clean profit is holding-based</div></div>
+      <div class="tile"><div class="v">59% vs 42%</div><div class="k">P(good_fwd｜good_past vs bad_past) — best metric</div></div>
+      <div class="tile warn"><div class="v">~1%</div><div class="k">are steady compounders</div></div>
+      <div class="tile warn"><div class="v">66% @ 6mo</div><div class="k">of the 1-month persistence gap still present</div></div>
+      <div class="tile"><div class="v">34.0% / 19.6%</div><div class="k">volume / PnL excluded (CTF blind spot)</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">⚑ REMEMBER THIS</div>
+    <h2>Discoveries worth keeping</h2>
+    <p class="measure">Things we learned the hard way — data quirks, decisions, and bugs — so they aren't lost.</p>
+
+    <h3>Data-source decisions</h3>
+    <div class="risk">
+      <div class="item"><div class="rh"><span class="sev low">source</span>Goldsky order-book subgraph = the spine</div>
+        <p>Full per-fill history (both maker &amp; taker), queryable per wallet. Legacy subgraphs stop at the
+          <b>2026-04-28 v2 migration</b> — the study's hard data cutoff. See <code>probes/</code> and the memory note
+          <code>polymarket-data-access</code>.</p></div>
+      <div class="item"><div class="rh"><span class="sev med">rejected</span>lum.id findata = taker-only tape → excluded</div>
+        <p>Its per-market trades endpoint is a <b>taker tape</b> (one row per print, labeled with the taker only — no
+          maker). It's also a forward-capture starting ~May 2026. Splicing it onto the both-legs subgraph at the
+          April seam would manufacture a false edge-decay artifact. Full probe results:
+          <code>probes/FINDATA_API_REFERENCE.md</code>.</p></div>
+      <div class="item"><div class="rh"><span class="sev med">proxy</span>No resolution timestamp anywhere</div>
+        <p>The pnl-subgraph <code>Condition</code> has only payout numerators. Resolution <em>dates</em> come from
+          CLOB <code>end_date</code> (bulk /markets endpoint, ~881k markets) as a proxy — the main methodological
+          assumption of Part 4.</p></div>
+    </div>
+
+    <h3>Data quirks &amp; modelling choices</h3>
+    <div class="risk">
+      <div class="item"><div class="rh"><span class="sev med">quirk</span>CTF split/merge is invisible to the fill log</div>
+        <p>Minting a set (<span class="mono">$1 → 1 YES + 1 NO</span>) isn't an order-book fill, so wallets that mint
+          then sell appear to "sell more than they bought" (<code>oversold</code>, no cost basis). This is the
+          34.0%-volume exclusion and it's concentrated in market-makers. We chose <b>not</b> to model CTF (they aren't
+          followable anyway) but report the size.</p></div>
+      <div class="item"><div class="rh"><span class="sev low">quirk</span>Hedge flag catches sequential flips too</div>
+        <p>"Bought both YES and NO, ever" flags <b>simultaneous hedges</b> and <b>sequential flips</b> (bought YES,
+          sold, bought NO) alike. Sampling showed ~41% of hedged pairs are flips by count, but only ~18% by dollars —
+          small impact, left as-is.</p></div>
+      <div class="item"><div class="rh"><span class="sev low">choice</span>FIFO primary, VWAP as a robustness check</div>
+        <p>Every position is decomposed both ways; conclusions don't change between them. Sell-at-resolution
+          tolerance uses price triggers (&gt;0.97 / &lt;0.03); the "within 60 min" trigger was uncomputable (no
+          resolution timestamp).</p></div>
+      <div class="item"><div class="rh"><span class="sev low">insight</span>"Holder by profit" ≠ "held everything"</div>
+        <p>61% of pure holders held &lt;80% of their <em>capital</em> to settlement — they churn a core position at
+          break-even, so <code>trading_share</code> ≈ 0 while <code>holding_fraction_dollar</code> is lower.</p></div>
+    </div>
+
+    <h3>Bugs found &amp; fixed (in <code>lib_subgraph.py</code> / <code>lib_recon.py</code>)</h3>
+    <div class="risk">
+      <div class="item"><div class="rh"><span class="sev high">bug</span>Python-3.9 <span class="mono">socket.timeout</span> escaped the retry loop</div>
+        <p>It isn't a <code>TimeoutError</code> subclass in 3.9, so read-timeouts crashed the fetch. Fixed by catching
+          <code>socket.timeout</code>/<code>OSError</code> explicitly.</p></div>
+      <div class="item"><div class="rh"><span class="sev high">bug</span>92 MB written to disk <em>per wallet</em></div>
+        <p><code>resolve_tokens</code> re-saved the full token+condition caches on every call. Made the save
+          conditional (only on change) and memoized the load — turned a ~2 h run into minutes.</p></div>
+      <div class="item"><div class="rh"><span class="sev high">bug</span>Cache corruption from a mid-write kill</div>
+        <p>Killing a run during a non-atomic <code>json.dump</code> truncated <code>cond_payout.json</code>. Recovered
+          by salvaging the valid prefix (129,792 of ~262k entries) + self-heal. Cache writes are now <b>atomic</b>
+          (temp + rename), so it can't recur.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">FILE INVENTORY</div>
+    <h2>Everything on disk</h2>
+    <div class="files">
+      <h4>Code — <code>/Users/somya/polymarket-whales/</code></h4>
+      <div class="scroll"><table class="data">
+        <tr><td class="mono">lib_subgraph.py</td><td>subgraph client · fetch_fills · normalize (both maker/taker)</td></tr>
+        <tr><td class="mono">lib_recon.py</td><td>token→market, market→resolution (memoized, atomic saves)</td></tr>
+        <tr><td class="mono">lib_decompose.py</td><td>FIFO/VWAP trading-vs-holding decomposition</td></tr>
+        <tr><td class="mono">10_part1_positions.py</td><td>Part 1 driver → positions.csv, wallet_meta.csv, part1_stats.json</td></tr>
+        <tr><td class="mono">11_/12_part2_*.py</td><td>Part 2 aggregation + bimodality</td></tr>
+        <tr><td class="mono">20_/21_/23_*.py</td><td>Part 3 enumerate · reconstruct · report</td></tr>
+        <tr><td class="mono">30_market_dates.py</td><td>CLOB resolution-date map</td></tr>
+        <tr><td class="mono">31_/32_/33_/34_*.py</td><td>Part 4 persistence · consistency · decay · equity</td></tr>
+      </table></div>
+      <h4>Outputs — <code>out/</code></h4>
+      <p class="kv"><code>positions.csv</code> (276 MB, 963k rows) · <code>wallet_metrics.csv</code> (2,055 wallets) ·
+        <code>cohort_labeled.csv</code> · <code>candidates.json</code> · <code>part4a_persistence.csv</code> ·
+        <code>part4a_wallet_status.csv</code> · <code>part4b…4d.csv</code> ·
+        <code>part1_stats.json</code> · <code>*_web_data.json</code> (unused legacy snapshot files — each page's own
+        data is now embedded inline in its HTML) · several PNGs. Full guide: <code>EXPERIMENT2_GUIDE.md</code>.</p>
+      <h4>Data caches — <code>data/</code></h4>
+      <p class="kv"><code>fills/</code> (6,347 wallets) · <code>tok2cond.json</code> · <code>cond_payout.json</code> ·
+        <code>clob_market_dates.json</code> (881k markets) · <code>lumid_full.json</code> (the 500 winners)</p>
+      <h4>Docs</h4>
+      <p class="kv"><code>EXPERIMENT2_GUIDE.md</code> (start here — everything) ·
+        <code>README.md</code> (fast resume) ·
+        <code>PART1_position_decomposition.md</code> · <code>probes/FINDATA_API_REFERENCE.md</code> ·
+        <code>probes/README.md</code> · this <code>site/</code> folder · persistent memory notes
+        (<code>polymarket-follow-study-*</code>)</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p><b style="color:var(--ink)">To reproduce or extend:</b> the pipeline runs <code>10</code> → <code>12</code>
+      (Parts 1–2), <code>20</code> → <code>23</code> (Part 3, the long fetch), <code>30</code> → <code>34</code>
+      (Part 4). Everything is cached and resumable. The two-halves rule's part (b) — <em>which trade</em> to copy —
+      is the natural next project; this study cleared the gate for it.</p>
+    <p class="kv">All pages use only real computed values. Window ≤ 2026-04-28. Built as a local documentation site;
+      open <code>site/index.html</code> in any browser.</p>
+  </div>
+</div>
+
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{const c=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');root.setAttribute('data-theme',c==='dark'?'light':'dark');};
+</script>
+</body></html>

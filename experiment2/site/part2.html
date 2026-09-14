@@ -1,0 +1,309 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part 2 — From positions to wallets</title>
+<link rel="stylesheet" href="study_styles.css">
+</head><body>
+
+<div class="topbar"><div class="wrap">
+  <span class="dot"></span><span class="tag">WORTH FOLLOWING?</span>
+  <nav>
+    <a href="index.html">Overview</a><a href="part1_explainer.html">P1</a>
+    <a href="part2.html" class="here">P2</a><a href="part3.html">P3</a>
+    <a href="part4.html">P4</a><a href="part5.html">P5</a>
+    <a href="pipeline.html">Map</a>
+    <button class="tbtn" id="themeBtn">theme</button>
+  </nav>
+</div></div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="partno">Part 2</div>
+    <h1>From 2.4 million positions to one number per wallet</h1>
+    <p class="lead">Part 1 split every <em>position</em> into trading vs holding profit. Part 2 rolls those up
+      to <em>wallets</em>, computes the study's key variable — the <b class="trade">trading share</b> of each
+      wallet's profit — and answers the first real question: are there two kinds of players, or one?</p>
+  </header>
+
+  <section>
+    <div class="snum">01 · WHAT &amp; WHY</div>
+    <h2>The goal</h2>
+    <div class="measure">
+      <p><b>What.</b> Aggregate the position table into per-wallet metrics for every wallet with
+        <b>≥ 30 resolved positions</b>, then test whether the holder/trader split is <b>bimodal</b>
+        (two real populations) or a <b>continuum</b>.</p>
+      <p class="callout"><b>Which wallets?</b> Not the 278 lum.id top-winners this project started from —
+        that set is winners-only (survivorship-biased). The cohort here is the <b>PnL-neutral</b> pool built in
+        <a href="part3.html">Part 3</a> by sampling the raw fill tape (activity-weighted, not outcome-weighted):
+        ~6,336 wallets reconstructed, of which the <b>3,330</b> with ≥ 30 decomposable resolved positions clear the
+        floor below. The 278 winners are a small subset.</p>
+      <p><b>Why.</b> You can only follow a wallet whose edge is in <b class="hold">holding</b> — an outcome view
+        you can copy. If a wallet earns by <b class="trade">trading</b> the price path, its edge is execution and
+        spread, which you can't replicate. So we need one number per wallet that says <em>where the money came
+        from</em> — and we need to know whether "traders" and "holders" are genuinely different species or just
+        two ends of one scale (the prior clustering suggested a continuum, but on noisy features; this is a clean
+        re-test).</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">02 · AGGREGATION</div>
+    <h2>Many positions → one wallet</h2>
+    <p class="measure">Take one real wallet, <span class="mono" id="ex-w"></span>, with
+      <b id="ex-n"></b> clean resolved positions. Summing its position-level PnL:</p>
+    <div class="panel">
+      <div class="scroll"><table class="data">
+        <tr><td>Σ trading PnL</td><td class="num trade" id="ex-tr"></td><td>money from selling before resolution</td></tr>
+        <tr><td>Σ holding PnL</td><td class="num hold" id="ex-ho"></td><td>money from being right at settlement</td></tr>
+        <tr><td>Σ total PnL</td><td class="num" id="ex-to"></td><td>its realized profit</td></tr>
+        <tr><td>Σ |total PnL|</td><td class="num" id="ex-ab"></td><td>gross money moved — wins &amp; losses don't cancel</td></tr>
+      </table></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">03 · THE KEY VARIABLE</div>
+    <h2>trading_share</h2>
+    <div class="panel" style="text-align:center;font-family:var(--mono);font-size:1.05rem;padding:26px">
+      <span class="trade">Σ trading PnL</span> <span style="color:var(--faint)">÷</span> <span>Σ |total PnL|</span>
+      <span style="color:var(--faint)"> = </span>
+      <span class="trade" id="ex-trn"></span> <span style="color:var(--faint)">/</span> <span id="ex-abn"></span>
+      <span style="color:var(--faint)"> = </span><b id="ex-ts" style="font-size:1.3em"></b>
+    </div>
+    <div class="measure" style="margin-top:16px">
+      <p><b>Reading it:</b> this measures <em>where the profit came from</em>, not how much trading happened.
+        <b class="hold">~0 = no trading edge</b> — the profit came from being right about outcomes (a copyable
+        view), <em>or</em> the wallet traded actively but broke even; either way there is nothing to copy in its
+        trading. <b class="trade">~1 = a trader</b> whose profit is execution, not outcomes. Our example sits at
+        essentially <b>zero</b> — it even lost a trivial amount trading, so all its profit came from holding.
+        <span class="kv">(A wallet can read ~0 and still trade heavily at break-even — see §07.)</span></p>
+      <p class="callout"><b>Why divide by <span class="mono">Σ|total|</span>, not <span class="mono">Σ total</span>?</b>
+        So wins and losses don't cancel in the denominator. A wallet that made $1M trading and lost $1M holding
+        nets ~$0 total — with a plain sum the ratio explodes or misleads. The absolute value asks the honest
+        question: <em>of all the money that moved through this wallet, what fraction came from trading?</em>
+        It's profit-weighted, so it reflects where the dollars actually came from.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">04 · SUPPORTING METRICS</div>
+    <h2>The rest of a wallet's fingerprint</h2>
+    <p class="measure">Alongside <span class="mono">trading_share</span>, each wallet gets these — formula, the real
+      value for the example wallet, and what it tells you. Outcome metrics use only <b>held, non-hedged</b> positions
+      (set <span class="mono">H</span>) — a directional view has to exist to score it; <span class="mono">Σ</span>
+      runs over those positions.</p>
+    <div class="mgrid" id="metrics"></div>
+  </section>
+
+  <section>
+    <div class="snum">05 · THE CENTRAL TEST</div>
+    <h2>Two populations, or one?</h2>
+    <p class="measure">The distribution of <span class="mono">trading_share</span> across all
+      <b id="ts-n"></b> qualifying wallets. Teal band = holders / no trading edge (&lt;0.2), amber band = traders (&gt;0.8).</p>
+    <div class="panel">
+      <div class="chart" id="tshist"></div>
+      <div class="kv" id="ts-cap" style="margin-top:8px"></div>
+    </div>
+    <div class="measure" style="margin-top:16px">
+      <p><b>Is it one hump or two?</b> <b>Hartigan's dip test</b> — the direct test for modality, and agnostic to the
+        distribution's shape — measures how far the data departs from the best single-humped fit (a bigger dip = more
+        clearly multi-peaked). It returns <span class="mono">dip = <b id="dipv"></b></span>,
+        <span class="mono">p = <b id="dipp"></b></span>: the null is "one hump," and a <em>small</em> p would let us
+        reject it — <span class="mono">p ≈ 1</span> is the opposite, <b>no evidence whatsoever against a single peak</b>.</p>
+      <p>A <b>Gaussian mixture</b> (which describes the data as a blend of Gaussian bumps, with BIC picking how many)
+        <em>did</em> prefer two components — which naively reads as two populations. But look <em>where</em> the two
+        bumps landed: means <span class="mono" id="gmeans"></span> — sitting almost on top of each other near zero, with
+        <b>no second peak out at the "trader" end</b>. That isn't two clusters; it's <b>one lopsided lump</b>, and the
+        second Gaussian only exists to <b>absorb the skew</b> a single symmetric Gaussian can't bend to fit. That's a
+        known GMM artifact: BIC answers "how many Gaussians fit?", <em>not</em> "how many modes?" — so on this question
+        the dip test is authoritative.</p>
+      <p class="callout"><b>Verdict: one continuous population, overwhelmingly holders.</b> There is no separate
+        "trader" tribe among wallets we can cleanly measure.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">06 · HOW MUCH IS FOLLOWABLE</div>
+    <h2>Almost all profit is the copyable kind</h2>
+    <p class="measure">Share of total cohort profit by bucket:</p>
+    <div class="panel">
+      <div class="splitbar" id="pshare"></div>
+      <div class="kv" style="display:flex;justify-content:space-between;margin-top:9px">
+        <span><span class="chip hold">no trade edge &lt;0.2</span> <b id="ps-h"></b></span>
+        <span><span class="chip">middle</span> <b id="ps-m"></b></span>
+        <span><b id="ps-t"></b> <span class="chip trade">traders &gt;0.8</span></span>
+      </div>
+    </div>
+    <p class="measure kv" style="margin-top:12px">~98% of the cleanly-measured profit is a copyable holding edge —
+      the encouraging headline for a following strategy.</p>
+  </section>
+
+  <section>
+    <div class="snum">07 · A SUBTLETY WE VERIFIED</div>
+    <h2>“Holder by profit” ≠ “held everything”</h2>
+    <p class="measure">A wallet's <b class="trade">trading_share</b> (profit-weighted) and its
+      <b>holding_fraction_dollar</b> (share of <em>capital</em> held to settlement) measure different things — and
+      they diverge. Among the <b id="hf-n"></b> wallets with trading_share &lt; 0.2 (holders <em>by profit</em>),
+      here's their <span class="mono">holding_fraction_dollar</span> (strict):</p>
+    <div class="panel">
+      <div class="chart" id="hfhist"></div>
+      <div class="kv" id="hf-cap" style="margin-top:8px"></div>
+    </div>
+    <p class="measure callout warn" style="margin-top:16px"><b id="hf-below"></b> of these held
+      <em>less than 80%</em> of their capital to settlement. The reconciliation: the capital they turned over early
+      made ≈ <b>zero</b> profit (bought and sold at similar prices), so they're holders by <em>profit</em> but only
+      moderate holders by <em>capital</em>. They trade around a core position; the net of that trading is nil.</p>
+  </section>
+
+  <section>
+    <div class="snum">08 · ASSUMPTIONS &amp; POSSIBLE ERRORS</div>
+    <h2>What could be wrong here</h2>
+    <div class="risk" id="risks"></div>
+  </section>
+
+  <section>
+    <div class="snum">09 · FILES</div>
+    <h2>Created, changed &amp; produced</h2>
+    <div class="files">
+      <h4>Created</h4>
+      <div class="scroll"><table class="data">
+        <tr><td><code>11_part2_wallets.py</code></td><td>Aggregates <code>positions.csv</code> → per-wallet metrics
+          (<code>trading_share</code>, both holding-fraction variants, outcome + trading metrics). Defines the two
+          position sets <code>D</code> (resolved &amp; not oversold) and <code>H</code> (D &amp; not hedged &amp; held).</td>
+          <td class="mono">→ wallet_metrics.csv</td></tr>
+        <tr><td><code>12_part2_bimodality.py</code></td><td>Hartigan dip test + GMM-BIC on <code>trading_share</code>
+          and holding-fraction; profit-share-by-bucket; the ruling-2 exclusion report.</td>
+          <td class="mono">→ 2 dist PNGs</td></tr>
+      </table></div>
+      <h4>Changed (to enable Part 2's two rulings)</h4>
+      <div class="scroll"><table class="data">
+        <tr><td><code>lib_decompose.py</code></td><td>Added <code>held_fraction_strict</code> &amp;
+          <code>held_fraction_adjusted</code>, plus <code>usd_held</code>, <code>usd_held_adjusted</code>,
+          <code>pnl_holding_settle</code>.</td><td>Ruling 1 (both variants) + dollar holding metrics</td></tr>
+        <tr><td><code>10_part1_positions.py</code></td><td>Emit those new columns; also write
+          <code>wallet_meta.csv</code> and <code>part1_stats.json</code>.</td>
+          <td>maker/frequency metrics + exclusion counts (Ruling 2)</td></tr>
+      </table></div>
+      <h4>Produced</h4>
+      <p class="kv"><code>out/wallet_metrics.csv</code> — <span id="f-wallets"></span> wallets × ~22 metrics (the table
+        Parts 3 &amp; 4 build on) · <code>out/trading_share_dist.png</code> · <code>out/holding_fraction_dist.png</code></p>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="part1_explainer.html">← Part 1 · Decomposition</a>
+    <a href="part3.html">Part 3 · Survivorship →</a>
+  </div>
+  <div class="footer"><p class="kv">All figures are real computed values from <code>out/wallet_metrics.csv</code> and
+    <code>out/positions.csv</code>. Cohort: 3,330 wallets with ≥30 resolved positions, window ≤ 2026-04-28.</p></div>
+</div>
+
+<script id="d" type="application/json">{"example":{"wallet":"0x4a9a879628\u2026","n_positions":68,"sum_trading":-403.32409999999993,"sum_holding":21036.394699999983,"sum_total":20633.070699999986,"trading_share":-0.0020577486387029,"holding_fraction":0.986107003513922,"hold_win_rate":0.8333333333333334,"hold_dollar_win_rate":0.7862586331934348,"sizing_gap":-0.0470747001398985,"holding_excess_return":0.1612302276965056,"maker_ratio":0.5102632753235163,"n_markets":68,"abs_total":196002.6081},"trading_share":{"bins":[-1.0,-0.95,-0.9,-0.85,-0.8,-0.75,-0.7,-0.65,-0.6,-0.55,-0.5,-0.45,-0.4,-0.35,-0.3,-0.25,-0.2,-0.15,-0.1,-0.05,0.0,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0],"counts":[0,0,0,1,1,3,0,2,2,1,4,8,5,9,14,46,46,93,232,752,1111,336,221,141,93,70,39,42,21,10,12,3,5,2,3,1,0,1,0,0],"n":3330,"median":0.003,"p10":-0.074,"p90":0.188,"holders":3028,"middle":301,"traders":1,"dip":0.0029,"dip_p":1.0,"gmm_means":[0.002,0.061],"bic1":-3969.0,"bic2":-6056.0},"profit_share":{"holders":0.9739352156993752,"middle":0.02605143159766675,"traders":1.3352702957858342e-05},"hfd_strict":{"counts":[131,136,142,187,223,310,338,383,469,709],"median":0.715,"below08":1850,"below08_pct":0.611,"n":3028},"hfd_adjusted":{"counts":[16,32,39,94,140,203,284,442,608,1167],"median":0.847,"below08":1250,"below08_pct":0.413,"n":3028},"exclusion":{"total_vol":7085960528.82603,"oversold_vol":1468418255.7819002,"puresell_vol":870218629.8986299,"oversold_pnl":46352507.558999985,"clean_pnl":179304021.75989997,"vol_out_pct":0.33,"pnl_out_pct":0.205},"scale":{"wallets_qualified":3330,"wallets_reconstructed":6336}}</script>
+<script>
+const D=JSON.parse(document.getElementById('d').textContent);
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{const c=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');root.setAttribute('data-theme',c==='dark'?'light':'dark');};
+const money=(n,d=0)=>'$'+Math.round(n).toLocaleString();
+const pct=n=>(n*100).toFixed(1)+'%';
+
+// example
+const e=D.example;
+document.getElementById('ex-w').textContent=e.wallet;
+document.getElementById('ex-n').textContent=e.n_positions;
+document.getElementById('ex-tr').textContent=money(e.sum_trading);
+document.getElementById('ex-ho').textContent=money(e.sum_holding);
+document.getElementById('ex-to').textContent=money(e.sum_total);
+document.getElementById('ex-ab').textContent=money(e.abs_total);
+document.getElementById('ex-trn').textContent=Math.round(e.sum_trading).toLocaleString();
+document.getElementById('ex-abn').textContent=Math.round(e.abs_total).toLocaleString();
+document.getElementById('ex-ts').textContent=e.trading_share.toFixed(3);
+
+// metrics cards
+const M=[
+ ['holding_fraction_dollar', e.holding_fraction.toFixed(3), 'Σ usd_held ÷ Σ buy_usd',
+  'How much of its deployed capital the wallet actually carries to the outcome (vs sells early). ≈1 = commits fully to its view; lower = trades around a core position.'],
+ ['hold_win_rate', e.hold_win_rate.toFixed(3), '#winning holds ÷ #holds',
+  'How often it is right about outcomes, counting every settled bet equally (unweighted accuracy).'],
+ ['hold_dollar_win_rate', e.hold_dollar_win_rate.toFixed(3), '$ held on winners ÷ $ held total',
+  'Size-weighted accuracy: what fraction of the money it committed landed on winning outcomes.'],
+ ['sizing_gap', e.sizing_gap.toFixed(3), 'hold_$_win_rate − hold_win_rate',
+  '>0 ⇒ it bets bigger when it is right (conviction sizing skill); <0 ⇒ no such edge. Here slightly negative — it did not size up on winners.'],
+ ['holding_excess_return', e.holding_excess_return.toFixed(3), 'Σ pnl_holding_settle ÷ Σ usd_held',
+  'The purest forecasting edge: return on capital held to settlement. Dollar-weighted (a pooled Σ/Σ ratio — each bet counts by the capital it risked, not one-per-bet). >0 = it bought winners cheaper than they eventually paid out — it beat the price it paid.'],
+ ['maker_ratio', e.maker_ratio.toFixed(2), 'maker fills ÷ total fills',
+  'Execution style, NOT profit source. High = patient limit orders (provides liquidity); low = crosses the spread for immediacy. A maker can still be a holder by profit.'],
+];
+const fst='font-family:var(--mono);font-size:.72rem;color:var(--muted);background:var(--panel);border:1px solid var(--hair-2);border-radius:5px;padding:3px 7px;margin:6px 0 7px;display:inline-block';
+document.getElementById('metrics').innerHTML=M.map(m=>
+ `<div class="mcard"><div class="mk">${m[0]}</div><div class="mv">${m[1]}</div>`+
+ `<div style="${fst}">${m[2]}</div><div class="md">${m[3]}</div></div>`).join('');
+
+// trading_share histogram
+function hist(elId,bins,counts,zones,colorFn,ann,opts){
+  opts=opts||{};
+  const W=880,H=250,pL=52,pR=12,pB=52,pT=12,n=counts.length,mx=Math.max(...counts);
+  const bw=(W-pL-pR)/n; const xv=v=>pL+((v-bins[0])/(bins[bins.length-1]-bins[0]))*(W-pL-pR);
+  const plotB=H-pB, plotH=plotB-pT;                       // baseline y and plot height
+  const yv=c=>plotB-(mx?c/mx*plotH:0);                    // count -> y
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  (zones||[]).forEach(z=>{s+=`<rect x="${xv(z[0])}" y="${pT}" width="${xv(z[1])-xv(z[0])}" height="${plotH}" fill="${z[2]}"/>`;});
+  // y-axis gridlines + scale numbers (0, half, max wallets)
+  const nice=v=>v>=1000?(v/1000).toFixed(v>=1e4?0:1)+'k':String(v);
+  [0,mx/2,mx].forEach(v=>{const y=yv(v);
+    s+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="var(--hair-2)" stroke-width="1"${v?' stroke-dasharray="2 3"':''}/>`;
+    s+=`<text class="axlabel" x="${pL-6}" y="${y+3}" text-anchor="end">${nice(Math.round(v))}</text>`;});
+  counts.forEach((c,i)=>{const h=mx?c/mx*plotH:0;const mid=(bins[i]+bins[i+1])/2;
+    s+=`<rect x="${pL+i*bw+0.5}" y="${plotB-h}" width="${bw-1}" height="${h}" fill="${colorFn(mid)}"/>`;});
+  (ann||[]).forEach(a=>{s+=`<text class="axlabel" x="${xv(a[0])}" y="${pT+13}" text-anchor="middle" fill="${a[2]}">${a[1]}</text>`;});
+  const ticks=bins[0]<0?[-1,-.5,0,.5,1]:[0,.25,.5,.75,1];
+  ticks.forEach(t=>s+=`<text class="axlabel" x="${xv(t)}" y="${plotB+16}" text-anchor="middle">${t}</text>`);
+  // axis titles
+  if(opts.xTitle) s+=`<text class="axtitle" x="${pL+(W-pL-pR)/2}" y="${H-6}" text-anchor="middle">${opts.xTitle}</text>`;
+  if(opts.yTitle) s+=`<text class="axtitle" x="14" y="${pT+plotH/2}" text-anchor="middle" transform="rotate(-90 14 ${pT+plotH/2})">${opts.yTitle}</text>`;
+  return s+'</svg>';
+}
+const ts=D.trading_share;
+document.getElementById('ts-n').textContent=ts.n.toLocaleString();
+document.getElementById('tshist').innerHTML=hist('tshist',ts.bins,ts.counts,
+  [[-1,0.2,'var(--holding-soft)'],[0.8,1,'var(--trading-soft)']],
+  m=>m<0.2?'var(--holding)':m>0.8?'var(--trading)':'var(--muted)',
+  [[0.1,'holders','var(--holding)'],[0.9,'traders','var(--trading)']],
+  {xTitle:'trading_share  (−1 … +1  ·  share of profit from trading vs holding)', yTitle:'# wallets'});
+document.getElementById('ts-cap').innerHTML=`median <b>${ts.median.toFixed(3)}</b> · p10 ${ts.p10} · p90 ${ts.p90} · <b class="hold">${ts.holders.toLocaleString()}</b> holders · ${ts.middle} middle · <b class="trade">${ts.traders}</b> trader`;
+document.getElementById('dipv').textContent=ts.dip; document.getElementById('dipp').textContent=ts.dip_p.toFixed(3);
+document.getElementById('gmeans').textContent='['+ts.gmm_means.join(', ')+']';
+
+// profit share
+const p=D.profit_share, tot=p.holders+p.middle+p.traders;
+document.getElementById('pshare').innerHTML=
+ `<div class="split-hold" style="width:${p.holders/tot*100}%">${pct(p.holders)}</div>`+
+ `<div style="background:var(--muted);width:${p.middle/tot*100}%">${pct(p.middle)}</div>`+
+ `<div class="split-trade" style="width:${Math.max(p.traders/tot*100,0.4)}%"></div>`;
+document.getElementById('ps-h').textContent=pct(p.holders);
+document.getElementById('ps-m').textContent=pct(p.middle);
+document.getElementById('ps-t').textContent=pct(p.traders);
+
+// holding_fraction histogram (holders)
+const hf=D.hfd_strict, hbins=[];for(let i=0;i<=10;i++)hbins.push(i/10);
+document.getElementById('hf-n').textContent=hf.n.toLocaleString();
+document.getElementById('hfhist').innerHTML=hist('hfhist',hbins,hf.counts,
+  [[0,0.8,'var(--trading-soft)']], m=>m<0.8?'var(--trading)':'var(--holding)',
+  [[0.4,'below 0.8','var(--trading)']],
+  {xTitle:'holding_fraction_dollar  (0 … 1  ·  share of capital held to settlement)', yTitle:'# wallets'});
+document.getElementById('hf-cap').innerHTML=`median <b>${hf.median.toFixed(3)}</b> · adjusted-variant median ${D.hfd_adjusted.median.toFixed(3)}`;
+document.getElementById('hf-below').innerHTML=`<b>${hf.below08.toLocaleString()} (${pct(hf.below08_pct)})</b>`;
+
+// risks
+const R=[
+ ['med','CTF / market-maker blind spot (Ruling 2)',`~${pct(D.exclusion.vol_out_pct)} of volume and ~${pct(D.exclusion.pnl_out_pct)} of resolved PnL are excluded (oversold/CTF + pure-sells, no cost basis). So "98% of profit is holding" is measured on the clean set and under-represents market-makers. This is the single biggest caveat; carried into Part 5.`],
+ ['low','The ≥30-resolved-positions floor',`Wallets below 30 clean resolved positions are dropped — their metrics would be noise. This trades coverage for reliability; a wallet with real but infrequent skill and <30 settled bets is invisible here.`],
+ ['low','trading_share can be negative or >1',`When a wallet loses on trading while winning on holding, trading_share goes slightly negative (min −0.81 here); the reverse can exceed 1. These are correct, not bugs — the |total| denominator makes the ratio well-defined but not bounded to [0,1].`],
+ ['low','Hedged positions kept in $ aggregates, excluded from outcome metrics',`A hedged position has valid PnL (kept in trading_share / totals) but undefined direction (excluded from win-rate etc.). Also: our hedge flag catches sequential "flips" (bought YES, sold, bought NO) as hedges — ~41% of hedged pairs by count, but only ~18% by dollars, so the impact on dollar-weighted conclusions is small.`],
+ ['low','GMM numerical warnings',`The 2-component GMM throws divide-by-zero warnings fitting the near-degenerate spike at 0. Results are unaffected — the dip test is the authoritative unimodality test and the GMM is only a guarded tie-breaker (checked for component separation).`],
+ ['low','Profit-weighting hides break-even churn',`trading_share is about where PROFIT came from, so a holder who churns 20–30% of capital at break-even still reads ~0 (see §07). This is by design, but means "holder" describes the profit source, not literally buy-once-hold.`],
+];
+document.getElementById('risks').innerHTML=R.map(r=>
+ `<div class="item"><div class="rh"><span class="sev ${r[0]}">${r[0]==='med'?'moderate':'minor'}</span>${r[1]}</div><p>${r[2]}</p></div>`).join('');
+
+document.getElementById('f-wallets').textContent=D.scale.wallets_qualified.toLocaleString();
+</script>
+</body></html>

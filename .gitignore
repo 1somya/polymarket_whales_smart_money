@@ -1,0 +1,13 @@
+# Regenerable caches and outputs — see README/EXPERIMENT2_GUIDE for how to rebuild these.
+data/
+out/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/

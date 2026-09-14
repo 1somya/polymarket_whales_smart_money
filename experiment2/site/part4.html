@@ -1,0 +1,294 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part 4 — Does the edge persist?</title>
+<link rel="stylesheet" href="study_styles.css">
+</head><body>
+
+<div class="topbar"><div class="wrap">
+  <span class="dot"></span><span class="tag">WORTH FOLLOWING?</span>
+  <nav>
+    <a href="index.html">Overview</a><a href="part1_explainer.html">P1</a>
+    <a href="part2.html">P2</a><a href="part3.html">P3</a>
+    <a href="part4.html" class="here">P4</a><a href="part5.html">P5</a>
+    <a href="pipeline.html">Map</a>
+    <button class="tbtn" id="themeBtn">theme</button>
+  </nav>
+</div></div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="partno">Part 4 · the central test</div>
+    <h1>If you'd followed the “best” wallets, would it have worked?</h1>
+    <p class="lead">This is the whole point. Rank wallets on everything known up to a date, then measure whether the
+      top-ranked keep winning in a <b>disjoint later window</b> — against random, median, and bottom-decile
+      baselines. Then check if that edge is a <b>repeatable skill</b>, what its <b>equity curve</b> looks like, and
+      how fast it <b>decays</b>.</p>
+  </header>
+
+  <section>
+    <div class="snum">A · THE DESIGN</div>
+    <h2>Cumulative rank, disjoint forward evaluation</h2>
+    <div class="measure">
+      <p>For each month <b>t</b> from Jul 2025 to Mar 2026: <b>rank</b> wallets on all positions resolved
+        <em>through t</em> (cumulative → enough sample, since holders resolve slowly), then <b>evaluate</b> them only
+        on positions resolved in <b>(t, t+3 months]</b>.</p>
+      <p class="callout"><b>Why evaluation must be disjoint:</b> the cumulative ranking windows overlap each other, so
+        consecutive <em>rankings</em> look sticky by construction. Only a <b>disjoint forward window</b> — positions
+        that contributed nothing to the ranking — is a genuine out-of-sample test. We never report
+        ranking-to-ranking stickiness as persistence.</p>
+      <p>We restrict to <b class="hold">directional holders</b> (<span class="mono">trade_holding_rate ≥ 0.5</span>,
+        a count-based behavioral check — n_hold_positions ÷ n_positions — plus a $10 minimum average position size
+        to exclude micro-betting bots) — the followable population — and rank by four different metrics, because
+        <em>which</em> metric persists is itself the finding.</p>
+      <p class="callout">Two methodology notes, both from a 2026-08-14 review of this part: (1) the holder filter
+        used to be the profit-weighted <span class="mono">trading_share</span> — Part 2's key variable for a
+        <em>different</em> question (where profit came from), which turned out to misclassify 91-98% of
+        behaviorally-active traders as "holders" when reused as a behavioral filter. (2) The test itself used to be
+        a Spearman rank correlation between historical rank and forward ROI — a claim about whether ordering is
+        preserved across the <em>whole population</em>, not about whether an individual wallet's own edge persists.
+        Both are fixed below; see <code>EXPERIMENT2_GUIDE.md</code> for the full writeup.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">4A · PERSISTENCE</div>
+    <h2>Yes — modest, but real in every window</h2>
+    <p class="measure">The test: <span class="mono">good_past</span> = wallet's historical metric was positive;
+      <span class="mono">good_fwd</span> = its forward ROI was positive in the disjoint window. We report
+      <b>P(good_fwd｜good_past)</b> vs. <b>P(good_fwd｜bad_past)</b> vs. the unconditional baseline, averaged across
+      9 monthly windows, with a chi-square significance test on the gap between the two conditional rates:</p>
+    <div class="panel scroll"><table class="data">
+      <thead><tr><th>Rank by</th><th class="num">P(good⏐good_past)</th><th class="num">P(good⏐bad_past)</th><th class="num">baseline</th><th class="num">gap</th><th class="num">windows sig.</th></tr></thead>
+      <tbody id="persist-body"></tbody>
+    </table></div>
+    <div class="measure" style="margin-top:16px">
+      <p>Every metric ranks wallets so a historically-good wallet is more likely than baseline to keep a positive
+        edge forward — and for the strongest metric the gap is significant in <b>all 9 windows</b>. Two clean
+        results:</p>
+      <ul>
+        <li><b class="hold">Forecasting skill persists best.</b> <span class="mono">holding_excess_return</span>
+          (did they beat the price they paid) has the largest, most reliably significant gap.</li>
+        <li><b class="bad">Conviction-sizing barely beats baseline on returns.</b> <span class="mono">sizing_gap</span>
+          → forward ROI is significant in only 11% of windows — a specific hypothesis, tested and mostly rejected.
+          The sizing <em>behavior itself</em> is a stable trait, though (<span class="mono">sizing_gap →
+          fwd_sizing_gap</span>: 67% vs. 53%, significant in 67% of windows) — it just doesn't reliably pay off.</li>
+      </ul>
+      <p>The signal moves <b>roughly symmetrically in both directions</b>: a good-past wallet is about 10 points more
+        likely than baseline to stay good; a bad-past wallet is about 5-7 points less likely. Avoiding bad wallets
+        and picking good ones are comparably useful — neither dominates.</p>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h4 style="margin-top:0">Per-window stability — <span class="mono">holding_excess_return</span></h4>
+      <div class="chart" id="herchart"></div>
+      <div class="kv" style="margin-top:6px">The good_past/bad_past gap is positive in every single window (never a
+        lucky one-off); p-values from 2.6e-05 to 0.042.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">4B · CONSISTENCY</div>
+    <h2>But the profits are lumpy</h2>
+    <p class="measure">Persistence could be produced by one lucky hit. This section uses the <b>same 252 wallets</b>
+      4A tested (its <span class="mono">good_past</span> pool at the primary threshold) — not an independently
+      re-filtered population, so "does consistency predict forward persistence" is a question about one coherent
+      set of wallets, measured only on their <em>historical</em> positions (no leakage from the forward window):</p>
+    <div class="tiles" id="consist-tiles"></div>
+    <div class="panel" id="keytest" style="margin-top:14px"></div>
+    <p class="measure kv" style="margin-top:14px">So the edge is real but built on <b>infrequent big hits</b>, not
+      steady grinding — consistent with prediction markets being lumpy (a specialist gets few big chances a year),
+      but it means following means copying rare high-conviction bets. Filtering the good_past pool for low
+      concentration + a profitable median bet lifts forward persistence from 44% to 49% — a real, if modest, extra
+      edge.</p>
+  </section>
+
+  <section>
+    <div class="snum">4C · EQUITY-CURVE SHAPES</div>
+    <h2>Steady grinders are ~1% of the field</h2>
+    <p class="measure">Each holder's cumulative PnL plotted against resolution date, classified by shape (share of
+      wallets and share of cohort profit) — a broader population of <b id="shape-n"></b> eligible directional
+      holders (same <span class="mono">trade_holding_rate ≥ 0.5</span> filter as 4A, not narrowed to 4A's tested
+      pool):</p>
+    <div class="panel" id="shapes"></div>
+    <p class="measure kv" style="margin-top:12px"><b id="sh-lumpy"></b> of profit comes from lumpy
+      "volatile-rising" or one-hit wallets; only ~1% are smooth "steady climbers." <b id="sh-decayed"></b> earned it
+      mostly &gt;6 months ago — a stale edge you'd be chasing.</p>
+  </section>
+
+  <section>
+    <div class="snum">4D · DECAY</div>
+    <h2>The persistence rate fades gradually — no clean half-life</h2>
+    <p class="measure">The same <span class="mono">good_past</span>/<span class="mono">good_fwd</span> test as 4A,
+      evaluated at 1, 3, and 6-month horizons instead of one fixed 3-month window:</p>
+    <div class="panel scroll"><table class="data">
+      <thead><tr><th class="num">horizon</th><th class="num">P(good⏐good_past)</th><th class="num">P(good⏐bad_past)</th><th class="num">gap</th><th class="num">top-decile fwd ROI</th><th class="num">edge vs median</th><th class="num">windows sig.</th></tr></thead>
+      <tbody id="decay-body"></tbody>
+    </table></div>
+    <p class="measure kv" style="margin-top:12px">The good_past/bad_past <em>gap</em> shrinks gradually — from +20
+      points at 1 month to +16 points (84% of the 1-month gap) at 3 months to +13 points (66%) at 6 months — but
+      never approaches zero within this range, so there is <b>no clean 2–3-month half-life</b>. A good wallet stays
+      relatively good for at least 6 months, with steadily diminishing force — re-rank every 1–3 months anyway,
+      since the erosion is real even without a sharp cliff.</p>
+  </section>
+
+  <section>
+    <div class="snum">·</div>
+    <h2>Synthesis</h2>
+    <p class="measure callout"><b>Some wallets are genuinely worth following — but the edge is small, lumpy, decays
+      gradually over at least half a year without fully disappearing, and cuts both ways (avoiding bad wallets and
+      picking good ones are comparably useful).</b> A real out-of-sample signal exists, strongest via forecasting
+      skill (not conviction sizing), concentrated in rare high-conviction bets. The ideal steady compounder is ~1%
+      of holders.</p>
+  </section>
+
+  <section>
+    <div class="snum">◆ · A DATA PREREQUISITE</div>
+    <h2>Where the resolution dates came from</h2>
+    <div class="measure">
+      <p>The whole design bins positions by <b>resolution date</b> (rank on resolved-by-t, evaluate on
+        resolved-in-(t, t+3]). But <b>no resolution timestamp exists</b> in our subgraph data. The best available
+        proxy is the CLOB market <span class="mono">end_date</span> — resolution follows within days, which is plenty
+        for monthly binning.</p>
+      <p>We pulled it from CLOB's bulk markets endpoint (paginated), stopping early once cohort coverage hit 98%.
+        <b id="cov"></b> of clean resolved positions got a date.</p>
+      <p class="callout warn"><b>This is a proxy, and it's the main methodological caveat of Part 4.</b> If
+        <span class="mono">end_date</span> systematically differs from true resolution, a position could be binned
+        into the wrong month near a boundary. At monthly granularity the effect is small, but it is real.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">ASSUMPTIONS &amp; POSSIBLE ERRORS</div>
+    <h2>What could be wrong here</h2>
+    <div class="risk" id="risks"></div>
+  </section>
+
+  <section>
+    <div class="snum">FILES</div>
+    <h2>Created, changed &amp; produced</h2>
+    <div class="files">
+      <h4>Created</h4>
+      <div class="scroll"><table class="data">
+        <tr><td><code>30_market_dates.py</code></td><td>Bulk-pulls CLOB markets (paginated, early-stop at 98% cohort
+          coverage) → condition→resolution-date map.</td><td class="mono">→ data/clob_market_dates.json</td></tr>
+        <tr><td><code>31_part4a_persistence.py</code></td><td>The cumulative-rank / disjoint-forward persistence-RATE
+          test; 6 metric pairs × 3 holder thresholds × 9 windows; P(good_fwd｜good_past) vs. baseline. Also writes a
+          per-wallet good_past/good_fwd snapshot.</td><td class="mono">→ part4a_persistence.csv,
+          part4a_wallet_status.csv</td></tr>
+        <tr><td><code>32_part4b_consistency.py</code></td><td>Profit concentration, profitable-quarter fraction,
+          median-position PnL — the lucky-hit vs repeatable-skill measures, on 4A's own tested wallet
+          pool.</td><td class="mono">→ part4b_consistency.csv</td></tr>
+        <tr><td><code>33_part4d_decay.py</code></td><td>Same persistence-rate test, evaluated at 1/3/6-month
+          horizons — how the gap shrinks with distance.</td><td class="mono">→ part4d_decay.csv</td></tr>
+        <tr><td><code>34_part4c_equity.py</code></td><td>Per-wallet cumulative-PnL curves vs resolution date;
+          slope-R², drawdown, decay; shape classification (computes its own profit-concentration metric rather than
+          borrowing 4B's narrower one).</td><td class="mono">→ part4c_equity.csv + equity_examples.png</td></tr>
+      </table></div>
+      <h4>Changed</h4>
+      <p class="kv"><code>lib_recon.py</code> — the memoization / conditional-save / atomic-save hardening (done in
+        Part 3) made the Part 1 re-run over 6,347 wallets feasible for this part's inputs.</p>
+      <p class="kv" style="margin-top:8px"><b>2026-08-14 review:</b> holder-eligibility filter switched from
+        <span class="mono">trading_share</span> to <span class="mono">trade_holding_rate</span> across 4A/4C/4D; the
+        persistence test switched from Spearman rank correlation to a per-wallet
+        <span class="mono">P(good_fwd｜good_past)</span> rate in 4A/4D; 4B now reads 4A's tested population directly
+        instead of re-filtering; 4C computes its own concentration metric. Full detail:
+        <code>EXPERIMENT2_GUIDE.md</code>.</p>
+      <h4>Produced</h4>
+      <p class="kv">5 result files above + <code>equity_examples.png</code> (example curves) + the resolution-date map
+        covering 881,491 markets.</p>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="part3.html">← Part 3 · Survivorship</a>
+    <a href="part5.html">Part 5 · Verdict →</a>
+  </div>
+  <div class="footer"><p class="kv">All figures are real computed values from <code>out/part4a…4d</code> CSVs, current
+    as of 2026-08-14. Persistence at holder threshold trade_holding_rate ≥ 0.5; windows Jul 2025 – Mar 2026.</p></div>
+</div>
+
+<script id="d" type="application/json">{"persist":[{"metric":"realized_pnl","good":0.541,"bad":0.437,"base":0.489,"sig":0.444,"windows":9},{"metric":"roi","good":0.541,"bad":0.437,"base":0.489,"sig":0.444,"windows":9},{"metric":"holding_excess_return","good":0.585,"bad":0.423,"base":0.489,"sig":1.0,"windows":9},{"metric":"sizing_gap","good":0.502,"bad":0.433,"base":0.489,"sig":0.111,"windows":9}],"her_windows":[{"t":"2025-07-01","good":0.654,"bad":0.446,"gap":0.208,"p":0.000252709617128},{"t":"2025-08-01","good":0.636,"bad":0.405,"gap":0.232,"p":2.5656450919316104e-05},{"t":"2025-09-01","good":0.551,"bad":0.442,"gap":0.108,"p":0.041917438198788},{"t":"2025-10-01","good":0.572,"bad":0.455,"gap":0.117,"p":0.0124180868761786},{"t":"2025-11-01","good":0.602,"bad":0.477,"gap":0.125,"p":0.0051154781485278},{"t":"2025-12-01","good":0.611,"bad":0.495,"gap":0.117,"p":0.005502882223048},{"t":"2026-01-01","good":0.642,"bad":0.446,"gap":0.196,"p":2.1192398708890285e-05},{"t":"2026-02-01","good":0.516,"bad":0.329,"gap":0.187,"p":2.4581260166427617e-05},{"t":"2026-03-01","good":0.484,"bad":0.315,"gap":0.168,"p":0.000253009706699}],"consist":{"n":252,"profitable":252,"top1_median":0.543,"one_bet_over50":0.536,"median_pos_pos":0.782,"pq_median":0.667,"pq_75":0.437},"key_test":{"consistent_n":108,"consistent_pgood":0.491,"concentrated_n":144,"concentrated_pgood":0.438},"shapes":[{"shape":"steady_climber","n":19,"pct":0.0119,"profit":0.0061},{"shape":"volatile_rising","n":229,"pct":0.1439,"profit":0.4814},{"shape":"one_jump","n":388,"pct":0.2439,"profit":0.4525},{"shape":"decayed","n":65,"pct":0.0409,"profit":0.06},{"shape":"flat_or_down","n":890,"pct":0.5594,"profit":0.0}],"shape_n":1591,"decay":[{"h":1,"good":0.657,"bad":0.461,"top":0.018,"edge":0.0159,"sig":1.0},{"h":3,"good":0.612,"bad":0.449,"top":-0.0097,"edge":-0.0103,"sig":1.0},{"h":6,"good":0.571,"bad":0.441,"top":-0.019,"edge":-0.018,"sig":0.857}],"coverage":0.988}</script>
+<script>
+const D=JSON.parse(document.getElementById('d').textContent);
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{const c=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');root.setAttribute('data-theme',c==='dark'?'light':'dark');};
+const roi=n=>(n>=0?'+':'')+(n*100).toFixed(1)+'%';
+const pct=n=>(n*100).toFixed(0)+'%';
+const pp=n=>(n>=0?'+':'')+(n*100).toFixed(0)+'pp';
+
+// 4A persistence table
+const nice={realized_pnl:'realized PnL',roi:'ROI',holding_excess_return:'holding-excess-return',sizing_gap:'sizing_gap'};
+document.getElementById('persist-body').innerHTML=D.persist.map(p=>{
+  const hero=p.metric==='holding_excess_return';const fail=p.metric==='sizing_gap';
+  return `<tr><td>${hero?'<b class="hold">':''}${fail?'<b class="bad">':''}${nice[p.metric]}${(hero||fail)?'</b>':''}</td>
+    <td class="num"><b>${pct(p.good)}</b></td>
+    <td class="num">${pct(p.bad)}</td>
+    <td class="num">${pct(p.base)}</td>
+    <td class="num ${p.good-p.base>0?'hold':'bad'}">${pp(p.good-p.bad)}</td>
+    <td class="num">${(p.sig*9).toFixed(0)}/${p.windows}</td></tr>`;}).join('');
+
+// per-window good_past/bad_past gap chart
+(function(){
+  const w=D.her_windows, W=860,H=170,pL=30,pR=10,pB=34,pT=14, n=w.length, bw=(W-pL-pR)/n, mx=0.3;
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  s+=`<line x1="${pL}" y1="${H-pB}" x2="${W-pR}" y2="${H-pB}" stroke="var(--hair)"/>`;
+  w.forEach((d,i)=>{const h=d.gap/mx*(H-pB-pT); const x=pL+i*bw;
+    s+=`<rect x="${x+bw*0.2}" y="${H-pB-h}" width="${bw*0.6}" height="${h}" fill="var(--holding)"/>`;
+    s+=`<text class="axlabel" x="${x+bw/2}" y="${H-pB+13}" text-anchor="middle">${d.t.slice(2,7)}</text>`;
+    s+=`<text class="axlabel" x="${x+bw/2}" y="${H-pB-h-4}" text-anchor="middle" fill="var(--muted)">${pp(d.gap)}</text>`;});
+  document.getElementById('herchart').innerHTML=s+'</svg>';
+})();
+
+// 4B consistency tiles
+const c=D.consist;
+document.getElementById('consist-tiles').innerHTML=[
+ [pct(c.top1_median),'of a winner\'s profit from its SINGLE biggest bet (median)','warn'],
+ [pct(c.one_bet_over50),'get >50% of profit from one bet','warn'],
+ [pct(c.median_pos_pos),'have a profitable MEDIAN bet',''],
+ [pct(c.pq_75),'profitable in ≥75% of their quarters','warn'],
+].map(t=>`<div class="tile ${t[2]}"><div class="v">${t[0]}</div><div class="k">${t[1]}</div></div>`).join('');
+
+// 4B key test callout
+const kt=D.key_test;
+document.getElementById('keytest').innerHTML=`<h4 style="margin-top:0">KEY TEST — does consistency predict forward persistence?</h4>
+  <div class="kv">Among the ${c.n} good_past wallets, split by profit concentration (top1_share ≤ median &amp; a
+  profitable median position = "consistent"):</div>
+  <div class="tiles" style="margin-top:10px">
+    <div class="tile"><div class="v">${pct(kt.consistent_pgood)}</div><div class="k">P(good_fwd) — consistent (n=${kt.consistent_n})</div></div>
+    <div class="tile warn"><div class="v">${pct(kt.concentrated_pgood)}</div><div class="k">P(good_fwd) — concentrated (n=${kt.concentrated_n})</div></div>
+  </div>`;
+
+// 4C shapes
+const nm={steady_climber:'Steady climber',volatile_rising:'Volatile but rising',one_jump:'One big jump',decayed:'Decayed (stale)',flat_or_down:'Flat or down'};
+const cols={steady_climber:'var(--holding)',volatile_rising:'var(--holding)',one_jump:'var(--trading)',decayed:'var(--bad)',flat_or_down:'var(--muted)'};
+const mx=Math.max(...D.shapes.map(s=>s.pct));
+document.getElementById('shape-n').textContent=D.shape_n.toLocaleString();
+document.getElementById('shapes').innerHTML=D.shapes.map(s=>
+ `<div class="barrow"><div class="lab">${nm[s.shape]}<small>${s.n.toLocaleString()} wallets</small></div>
+   <div class="bartrack"><div class="barfill" style="width:${s.pct/mx*100}%;background:${cols[s.shape]}"></div></div>
+   <div class="n">${pct(s.pct)} · <b>${pct(s.profit)}</b> profit</div></div>`).join('');
+document.getElementById('sh-lumpy').textContent=pct(D.shapes[1].profit+D.shapes[2].profit);
+document.getElementById('sh-decayed').textContent=D.shapes.find(s=>s.shape==='decayed').n.toLocaleString()+' wallets';
+
+// 4D decay
+document.getElementById('decay-body').innerHTML=D.decay.map(d=>
+ `<tr><td class="num">${d.h} mo</td><td class="num"><b>${pct(d.good)}</b></td><td class="num">${pct(d.bad)}</td>
+   <td class="num ${d.good-d.bad>0?'hold':'bad'}">${pp(d.good-d.bad)}</td>
+   <td class="num ${d.top>=0?'hold':'bad'}">${roi(d.top)}</td><td class="num">${roi(d.edge)}</td>
+   <td class="num">${pct(d.sig)}</td></tr>`).join('');
+
+document.getElementById('cov').textContent=pct(D.coverage);
+
+// risks
+const R=[
+ ['high','Resolution date is a proxy (CLOB end_date)',`No true resolution timestamp exists in the data. We use the market end_date; resolution follows within days. At monthly binning this is fine, but a position resolving near a month boundary could be binned into the wrong window. This is the single biggest methodological assumption of Part 4. Coverage is 98.8% of clean resolved positions; the ~1% without a date are dropped from the time-binned analysis.`],
+ ['med','The edge is modest',`A ~55-65% conditional persistence rate against a ~50% baseline is a real, statistically significant signal — not a strong one. "Following works a little" is the honest read; do not over-interpret the top-decile numbers.`],
+ ['med','Forward ROI is noisy',`Forward performance is measured on a 3-month window that can be thin for some wallets (min 5 forward positions required). ROI on small forward capital is volatile, which adds noise to both the persistence-rate and the top-decile estimates.`],
+ ['med','Late windows are truncated',`The data ends 2026-04-28, so for t = Feb/Mar 2026 the forward window runs past the cutoff and has fewer resolved positions. Those windows carry less weight but are included; the earliest windows are the cleanest.`],
+ ['low','Holder filter + threshold sensitivity',`Persistence is reported at trade_holding_rate ≥ 0.5/0.7/0.9 and is directionally consistent across all three (see out/part4a_persistence.csv for the other two). The holder filter uses full-history trade_holding_rate, which peeks slightly across the ranking boundary; recomputing it strictly within the ranking window is a refinement not made (effect is expected to be small since the rate is stable).`],
+ ['low','Equity-shape classification is rule-based',`The steady/volatile/one-jump/decayed labels come from fixed thresholds (slope-R² ≥ 0.9, top1_share > 0.6, recent/historical slope < 0.25). Reasonable but arbitrary; a wallet near a boundary could flip labels. The proportions are directionally solid, not exact.`],
+ ['low','CTF / market-maker exclusion still applies',`Same clean-set caveat as Parts 1–3. The persistence result is about the followable directional-holder population, which is what we care about, but the excluded population is not tested here.`],
+];
+document.getElementById('risks').innerHTML=R.map(r=>
+ `<div class="item"><div class="rh"><span class="sev ${r[0]}">${r[0]==='high'?'major':r[0]==='med'?'moderate':'minor'}</span>${r[1]}</div><p>${r[2]}</p></div>`).join('');
+</script>
+</body></html>

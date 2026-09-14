@@ -1,0 +1,169 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part 5 — The verdict</title>
+<link rel="stylesheet" href="study_styles.css">
+</head><body>
+
+<div class="topbar"><div class="wrap">
+  <span class="dot"></span><span class="tag">WORTH FOLLOWING?</span>
+  <nav>
+    <a href="index.html">Overview</a><a href="part1_explainer.html">P1</a>
+    <a href="part2.html">P2</a><a href="part3.html">P3</a>
+    <a href="part4.html">P4</a><a href="part5.html" class="here">P5</a>
+    <a href="pipeline.html">Map</a>
+    <button class="tbtn" id="themeBtn">theme</button>
+  </nav>
+</div></div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="partno">Part 5 · interpretation</div>
+    <h1>Is any wallet worth following?</h1>
+    <p class="lead"><b>Yes — but the edge is small, lumpy, fades gradually over at least half a year without fully
+      disappearing, and cuts both ways</b> (avoiding bad wallets and picking good ones are comparably useful).
+      Genuine steady compounders are ~1% of the field. Here is the whole study, answered honestly.</p>
+  </header>
+
+  <section>
+    <div class="snum">THE QUESTION</div>
+    <h2>What this study was, and wasn't</h2>
+    <p class="measure">This was the <b>feasibility gate</b> for a copy-trading rule. The full rule has two halves:
+      (a) is a wallet worth following <em>at all</em>, and (b) is a <em>given trade</em> worth copying. This study
+      covered <b>(a) only</b>. If no wallet's edge survived out-of-sample, there would be no "when to follow" — the
+      answer would just be <em>never</em>. It doesn't.</p>
+  </section>
+
+  <section>
+    <div class="snum">Q1</div>
+    <h2>Is the holder/trader split two types, or a spectrum?</h2>
+    <p class="measure"><b>A spectrum.</b> The dip test finds <span class="mono">trading_share</span> unimodal
+      (p ≈ 1.0) on both the winners-only and the full 2,055-wallet cohort. There is no clean "traders vs holders"
+      dichotomy — wallets sit on one continuum, overwhelmingly on the holding end.</p>
+  </section>
+
+  <section>
+    <div class="snum">Q2</div>
+    <h2>How much of this market is followable?</h2>
+    <p class="measure"><b>98.2% of cleanly-measured profit is holding-based</b> — a copyable outcome edge, not
+      execution. <span class="chip warn">caveat</span> measured on the fill-reconstructable, non-CTF set: 34.0% of
+      volume and 19.6% of resolved PnL sit outside it (market-makers via CTF minting), so the true market-wide trader
+      share is higher — we just can't measure it cleanly.</p>
+  </section>
+
+  <section>
+    <div class="snum">Q3</div>
+    <h2>Does any ranking metric beat random, out-of-sample?</h2>
+    <p class="measure"><b>Yes — most metrics do, forecasting skill most reliably.</b> The test: for each wallet,
+      <span class="mono">good_past</span> = its historical metric was positive, <span class="mono">good_fwd</span> =
+      its forward ROI (in a disjoint later window) was positive. We report P(good_fwd｜good_past) vs.
+      P(good_fwd｜bad_past) vs. the unconditional baseline.</p>
+    <div class="panel scroll"><table class="data">
+      <thead><tr><th>Rank by</th><th class="num">P(good⏐good_past)</th><th class="num">P(good⏐bad_past)</th><th>persists?</th></tr></thead>
+      <tbody>
+        <tr><td class="hold"><b>holding-excess-return</b> (beat the price paid)</td><td class="num"><b>59%</b></td><td class="num">42%</td><td><span class="chip ok">strongest — sig. in 9/9 windows</span></td></tr>
+        <tr><td>ROI</td><td class="num">54%</td><td class="num">44%</td><td><span class="chip ok">yes — sig. in 4/9</span></td></tr>
+        <tr><td>realized PnL</td><td class="num">54%</td><td class="num">44%</td><td><span class="chip ok">yes — sig. in 4/9</span></td></tr>
+        <tr><td>sizing_gap (conviction sizing → forward ROI)</td><td class="num">50%</td><td class="num">43%</td><td><span class="chip bad">weak — sig. in only 1/9 windows</span></td></tr>
+      </tbody>
+    </table></div>
+    <p class="measure kv" style="margin-top:12px">Forecasting skill persists best and most reliably. Conviction-sizing
+      barely beats baseline on <em>returns</em> — though the sizing <em>behavior itself</em> is a stable trait
+      (sizing_gap → forward sizing_gap: 67% vs. 53%, sig. in 6/9 windows). The signal moves roughly symmetrically in
+      both directions: avoiding a bad-past wallet and picking a good-past one are comparably useful, not one
+      dramatically more reliable than the other.</p>
+  </section>
+
+  <section>
+    <div class="snum">Q4</div>
+    <h2>Which metric, how consistent, how long?</h2>
+    <div class="measure">
+      <p><b>Which:</b> <span class="mono">holding_excess_return</span> — the purest forecasting-skill measure.</p>
+      <p><b>How consistent:</b> not very smooth. Among the 252 historically-profitable directional holders the
+        persistence test actually covers, the median wallet earns <b>54% of profit from a single position</b>; only
+        <b>44%</b> are profitable in ≥75% of quarters; only <b>~1%</b> are "steady climbers" (holding ~1% of
+        cohort profit, out of a broader 1,591-wallet population). The edge is real but shows up in
+        <b>rare high-conviction bets</b>. Splitting good-history wallets by concentration shows the low-concentration
+        ones persist forward somewhat more often (49% vs. 44%) — a real but modest extra edge.</p>
+      <p><b>How long:</b> the persistence rate fades gradually (the good_past/bad_past gap goes +20pp → +16pp → +13pp
+        from 1 to 3 to 6 months — 66% of the original gap still present at 6 months), with <b>no clean 2–3-month
+        half-life</b>. Re-rank every 1–3 months anyway, since the erosion is real even without a sharp cliff.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="snum">Q5</div>
+    <h2>What does this mean for a following strategy?</h2>
+    <div class="panel">
+      <ol style="margin:0;padding-left:20px;line-height:1.7">
+        <li><b>Rank by forecasting skill</b> (holding-excess-return), restricted to directional holders
+          (<span class="mono">trade_holding_rate ≥ 0.5</span>, a count-based check) — <em>not</em> by raw PnL, which
+          rewards bankroll, not skill.</li>
+        <li><b>The signal cuts both ways, roughly symmetrically.</b> A good-past wallet is ~10 points more likely
+          than baseline to stay good; a bad-past one is ~5-7 points less likely. Treat avoiding bad wallets and
+          picking good ones as comparably useful.</li>
+        <li><b>Re-rank every ~1–3 months</b> — the edge doesn't fully decay within 6 months, but it visibly erodes.</li>
+        <li><b>Expect lumpy returns.</b> You'd be copying infrequent, high-conviction bets, not a smooth stream.</li>
+        <li><b>Best targets are the ~1% steady climbers</b> — low concentration, profitable median bet.</li>
+      </ol>
+    </div>
+    <p class="measure" style="margin-top:16px">Following is <b>viable but modest and defensive</b> — not a money
+      printer. Part (b) — <em>which trade</em> to copy — is worth doing, because part (a) cleared the gate: an
+      out-of-sample edge exists.</p>
+  </section>
+
+  <section>
+    <div class="snum">HONESTY</div>
+    <h2>The caveats, collected</h2>
+    <div class="risk">
+      <div class="item"><div class="rh"><span class="sev high">major</span>CTF / market-maker blind spot</div>
+        <p>34.0% of volume and 19.6% of resolved PnL is excluded (no cost basis for split/merge-minted tokens). All
+          "trading vs holding" and profitability figures are for the fill-reconstructable set; market-makers are
+          under-measured.</p></div>
+      <div class="item"><div class="rh"><span class="sev high">major</span>Resolution date is a proxy</div>
+        <p>No resolution timestamp exists in the data; we use CLOB <span class="mono">end_date</span> (resolution
+          follows within days). Fine for monthly binning, not exact.</p></div>
+      <div class="item"><div class="rh"><span class="sev med">moderate</span>The edge is modest</div>
+        <p>A ~55-65% conditional persistence rate against a ~50% baseline is a real, statistically significant
+          signal — not a strong one.</p></div>
+      <div class="item"><div class="rh"><span class="sev med">moderate</span>Activity-weighted sampling</div>
+        <p>The non-survivorship cohort over-represents high-frequency wallets (PnL-neutral, but not a uniform sample
+          of all wallets).</p></div>
+      <div class="item"><div class="rh"><span class="sev low">minor</span>Data window ends 2026-04-28</div>
+        <p>The legacy subgraph's v2-migration cutoff; the latest forward evaluation windows are shorter.</p></div>
+    </div>
+    <p class="measure kv" style="margin-top:14px">"No persistence beyond chance" would have been a real, useful
+      result too. It just isn't what we found — there <em>is</em> a modest, honest edge.</p>
+  </section>
+
+  <section>
+    <div class="snum">METHOD IN BRIEF</div>
+    <h2>How it was built, end to end</h2>
+    <div class="scroll"><table class="data">
+      <tr><td><b class="hold">Part 1</b></td><td>Per-fill history → position-level FIFO decomposition into trading vs
+        holding PnL; reconciled to 7 decimals over 367k clean positions.</td></tr>
+      <tr><td><b class="hold">Part 2</b></td><td>Aggregate to wallets; the <span class="mono">trading_share</span> key
+        variable; dip test → one continuous holder-dominated population.</td></tr>
+      <tr><td><b class="hold">Part 3</b></td><td>Survivorship-corrected cohort (2,055 qualifying wallets of 6,347
+        sampled, 59% losers) via PnL-neutral activity sampling.</td></tr>
+      <tr><td><b class="hold">Part 4</b></td><td>Cumulative-historical / disjoint-forward persistence-RATE testing,
+        consistency, decay, and equity-curve analysis.</td></tr>
+      <tr><td><b class="hold">Part 5</b></td><td>This synthesis.</td></tr>
+    </table></div>
+    <p class="kv" style="margin-top:14px">Complete file-by-file guide — findings, every decision and
+      ruling explained, strategy implications: <code>EXPERIMENT2_GUIDE.md</code>. Data: Goldsky
+      order-book subgraph, window ≤ 2026-04-28. Code: <code>10</code>–<code>34</code>, all documented.</p>
+  </section>
+
+  <div class="pager">
+    <a href="part4.html">← Part 4 · Persistence</a>
+    <a href="index.html">Overview →</a>
+  </div>
+  <div class="footer"><p class="kv">Be honest about what the data supports. The edge is real, modest, cuts both
+    ways, and fades gradually — that is the finding.</p></div>
+</div>
+
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{const c=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');root.setAttribute('data-theme',c==='dark'?'light':'dark');};
+</script>
+</body></html>
